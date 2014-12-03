@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Example app</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
+
+    <script type="text/javascript" src="js/jquery-1.11.1.js"></script>
+    <script type="text/javascript" src="js/underscore.js"></script>
+    <script type="text/javascript" src="js/backbone.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+    <div class="container">
+        <form id="record-form" class="form-inline" role="form">
+            <h2>Add a record</h2>
+            <label for="concept" class="sr-only">Email address</label>
+            <input type="text" id="concept" class="form-control" placeholder="Concept" required autofocus>
+            <label for="amount" class="sr-only">Amount</label>
+            <input type="number" id="amount" class="form-control" placeholder="Amount" required>
+            <button class="btn btn-primary" type="submit">Add record</button>
+        </form>
+        <br />
+        <div id="table-placeholder">
+            <table id="data-table" class="table">
+                <thead>
+                    <tr>
+                        <th>Concept</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+            <script type="text/template" id="record-template">
+                <td><%= concept %></td><td><%= amount %></td>
+            </script>
+        </div>
+    </div>
+</body>
+<script>
+
+    // This is just a demo for the purpose of the test.
+    // In a real life scenario this js code should rest in its own files according
+    // to the functionality it provides.
+
+    var tableView = Backbone.View.extend({
+        el : $('#data-table'),
+        initialize : function() {
+            this.model.bind("add", this.render, this);
+        },
+
+        render: function() {
+            $('#table-body').empty();
+            _.each(this.model.models, function(data) {
+                this.$el.append(new recordView({model : data}).render().el);
+            }, this);
+            return this;
+        }
+    });
+
+    var recordView = Backbone.View.extend({
+        tagName : "tr",
+        template : _.template($("#record-template").html()),
+
+        render : function() {
+            this.$el.html(this.template(this.model.toJSON()));
+            return this;
+        }
+    });
+
+    var record = Backbone.Model.extend({
+    });
+
+    var recordCollection = Backbone.Collection.extend({
+        model : record
+    });
+
+    var recordCollectionInstance = new recordCollection();
+
+    var view = new tableView({model: recordCollectionInstance}).render();
+
+    // events
+    $(document).ready(function(){
+        // get data from server
+        $.ajax({
+            url: "http://ges.loc:8005/data", // put your own endpoint here
+            type: "GET"
+        }).done(function(data) {
+            $.each(data, function(index, element){
+                recordCollectionInstance.add(new record({concept: element.concept, amount: element.amount}));
+            })
+        });
+    })
+
+    $('#record-form').submit(function(e){
+        e.preventDefault();
+        // we should perform more solid validation here
+        // but for the purpose of this example we leave this with html5 validation only
+        $.ajax({
+            url: "http://ges.loc:8005/data", // put your own endpoint here
+            data: {concept: $('#concept').val(), amount: $('#amount').val()},
+            type: "POST"
+        }).done(function() {
+            newRecord = new record({concept: $('#concept').val(), amount: $('#amount').val()});
+            recordCollectionInstance.add(newRecord);
+        });
+        return false;
+    })
+</script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+</html>
